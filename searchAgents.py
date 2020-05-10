@@ -40,6 +40,7 @@ from game import Actions
 import util
 import time
 import search
+import json
 
 class GoWestAgent(Agent):
     "An agent that goes West until it can't."
@@ -266,6 +267,21 @@ def euclideanHeuristic(position, problem, info={}):
 # This portion is incomplete.  Time to write code!  #
 #####################################################
 
+class CornersState: ##state
+    def __init__(self,pacman_loc,corners):
+        self.pacman_loc = pacman_loc
+        self.corners = corners
+
+
+    def __hash__(self):
+        data = [self.pacman_loc]
+        data.append(self.corners[:])
+        key = hash(str(data))
+        return key
+    def isGoal(self):
+        return len(self.corners) == 0
+        
+
 class CornersProblem(search.SearchProblem):
     """
     This search problem finds paths through all four corners of a layout.
@@ -273,12 +289,13 @@ class CornersProblem(search.SearchProblem):
     You must select a suitable state space and successor function
     """
 
-    def __init__(self, startingGameState):
+    def __init__(self, startingGameState,costFn = lambda x: 1):
         """
         Stores the walls, pacman's starting position and corners.
         """
         self.walls = startingGameState.getWalls()
         self.startingPosition = startingGameState.getPacmanPosition()
+        self.costFn = costFn
         top, right = self.walls.height-2, self.walls.width-2
         self.corners = ((1,1), (1,top), (right, 1), (right, top))
         for corner in self.corners:
@@ -288,22 +305,36 @@ class CornersProblem(search.SearchProblem):
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
-
+        corners = list(self.corners)
+        if self.inCorner(self.startingPosition):
+            corners.remove(self.startingPosition)
+        
+        self.startState = CornersState(self.startingPosition,corners)
     def getStartState(self):
         """
         Returns the start state (in your state space, not the full Pacman state
         space)
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.startState
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
+        return state.isGoal()
+        
+    def inCorner(self, loc):
+        flag = False
+        for corner in self.corners:
+            if corner == loc:
+                flag = True
+                break
+        return flag
+    # def removeCorner(self, state):
+    #     if self.inCorner(state):
+    #         self.corners.remove(state)
+    
     def getSuccessors(self, state):
         """
         Returns successor states, the actions they require, and a cost of 1.
@@ -323,7 +354,16 @@ class CornersProblem(search.SearchProblem):
             #   dx, dy = Actions.directionToVector(action)
             #   nextx, nexty = int(x + dx), int(y + dy)
             #   hitsWall = self.walls[nextx][nexty]
-
+            x,y = state.pacman_loc
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                nextLoc = (nextx, nexty)
+                nextCorner = state.corners[:]
+                if self.inCorner((nextx,nexty)) and (nextx,nexty) in nextCorner:
+                    nextCorner.remove((nextx,nexty))
+                childState = CornersState(nextLoc,nextCorner)
+                successors.append((childState,action,1))
             "*** YOUR CODE HERE ***"
 
         self._expanded += 1 # DO NOT CHANGE

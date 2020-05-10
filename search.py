@@ -19,22 +19,6 @@ Pacman agents (in searchAgents.py).
 
 import util
 
-def list2path(list):
-    """
-    Return path
-    """
-    from game import Directions
-    path = []
-    for i in list:
-        if str(i) is "West":
-            path.append(Directions.WEST)
-        elif str(i) is "South":
-            path.append(Directions.SOUTH)
-        elif str(i) is "East":
-            path.append(Directions.EAST)
-        elif str(i) is "North":
-            path.append(Directions.NORTH)
-    return path
 class SearchProblem:
     """
     This class outlines the structure of a search problem, but doesn't implement
@@ -89,57 +73,95 @@ def tinyMazeSearch(problem):
     print("Start:", problem.getStartState())
     return  [s, s, w, s, w, w, s, w]
 
+def graphSearch(problem, data_structure):
+    closed = set()
+    exec("fringe = util."+data_structure+"()")
+    start = problem.getStartState()
+    path = []
+    state = (start,path)
+    fringe.push(state)
+    while not fringe.isEmpty():
+        state, path = fringe.pop()
+
+        if problem.isGoalState(state): return path
+
+        if state not in closed:
+            closed.add(state)
+            print(len(closed))
+            for next in problem.getSuccessors(state):
+                if next[0] not in closed:
+                    fringe.push((next[0]),path + next[1])
+    return []
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
 
-    Your search algorithm needs to return a list of actions that reaches the
-    goal. Make sure to implement a graph search algorithm.
-
-    To get started, you might want to try some of these simple commands to
-    understand the search problem that is being passed in:
-
-    print("Start:", problem.getStartState())
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-    """
     "*** YOUR CODE HERE ***"
-
-    if problem.isGoalState(problem.getStartState()):
-        return []
-    result = []
-    closed = []
-    start = problem.getStartState()
-    action = []
-    state = (start,action) # (toa do, path)
+    """
     fringe = util.Stack()
+    closed = set()
+    start = problem.getStartState()
+    path = []
+    state = (start,path)
     fringe.push(state)
-    #util.pause()
-    
-    while not (problem.isGoalState(state[0])) and not fringe.isEmpty():
-        if state[0] in closed:
-            state = fringe.pop()
-            continue
-        else:
-            closed.append(state[0])
-        action = state[1]
-        stateList = [(e[0],action + [e[1]]) for e in problem.getSuccessors(state[0])]
-        for i in stateList:
-            fringe.push(i)
-        state = fringe.pop()
-    path = state[1]
-    path = list2path(path)
-    return path
+    while not fringe.isEmpty():
+        state, path = fringe.pop()
+
+        if problem.isGoalState(state): return path
+
+        if hash(state) not in closed:
+            closed.add(hash(state))
+            for next in problem.getSuccessors(state):
+                if next[0] not in closed:
+                    fringe.push(((next[0]),path + [next[1]]))
+    return []
     util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    fringe = util.Queue()
+    closed = set()
+    start = problem.getStartState()
+    path = []
+    state = (start,path)
+    fringe.push(state)
+    while not fringe.isEmpty():
+        state, path = fringe.pop()
+
+        if problem.isGoalState(state): return path
+
+        if hash(state) not in closed:
+            closed.add(hash(state))
+            for next in problem.getSuccessors(state):
+                if next[0] not in closed:
+                    fringe.push(((next[0]),path + [next[1]]))
+    return []
+
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
+    fringe = util.PriorityQueue()
+    closed = set()
+    start = problem.getStartState()
+    path = []
+    path_cost = 0
+    state = (start,path,path_cost)
+    fringe.push((state),path_cost)
+    while not fringe.isEmpty():
+        status = fringe.pop()
+        state = status[0]
+        path = status[1]
+        path_cost = status[2]
+        #print (state,path_cost,fringe.count)
+        if problem.isGoalState(state): return path
+        
+        if hash(state) not in closed:
+            closed.add(hash(state))
+            for next in problem.getSuccessors(state):
+                if next[0] not in closed:
+                    fringe.update(((next[0]),path + [next[1]], path_cost + next[2]), path_cost + next[2])
+    return []    
     util.raiseNotDefined()
 
 def nullHeuristic(state, problem=None):
@@ -149,9 +171,46 @@ def nullHeuristic(state, problem=None):
     """
     return 0
 
+def manhattanHeuristic(position, problem, info={}):
+    "The Manhattan distance heuristic for a PositionSearchProblem"
+    xy1 = position
+    xy2 = problem.goal
+    return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+def euclideanHeuristic(position, problem, info={}):
+    "The Euclidean distance heuristic for a PositionSearchProblem"
+    xy1 = position
+    xy2 = problem.goal
+    return ( (xy1[0] - xy2[0]) ** 2 + (xy1[1] - xy2[1]) ** 2 ) ** 0.5
+
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
+    fringe = util.PriorityQueue()
+    closed = set()
+    start = problem.getStartState()
+    g = 0 
+    h = heuristic(start,problem)
+    f = h + g
+    path = []
+    path_cost = 0
+    state = (start,path,path_cost)
+    fringe.push((state),f)
+    while not fringe.isEmpty():
+        status = fringe.pop()
+        state = status[0]
+        path = status[1]
+        path_cost = status[2]
+        if problem.isGoalState(state): return path
+        
+        if hash(state) not in closed:
+            closed.add(hash(state))
+            for next in problem.getSuccessors(state):
+                if next[0] not in closed:
+                    g = path_cost + next[2]
+                    h = heuristic(next[0],problem)
+                    f = h + g
+                    fringe.update(((next[0]),path + [next[1]], path_cost + next[2]), f)
+    return []    
     util.raiseNotDefined()
 
 
