@@ -256,6 +256,8 @@ def manhattanHeuristic(position, problem, info={}):
     xy1 = position
     xy2 = problem.goal
     return abs(xy1[0] - xy2[0]) + abs(xy1[1] - xy2[1])
+def manhattanDistance(coord1, coord2):
+    return (abs(coord1[0] - coord2[0]) + abs(coord1[1] - coord2[1]))
 
 def euclideanHeuristic(position, problem, info={}):
     "The Euclidean distance heuristic for a PositionSearchProblem"
@@ -382,6 +384,18 @@ class CornersProblem(search.SearchProblem):
             if self.walls[x][y]: return 999999
         return len(actions)
 
+def farestCorner(state,problem):
+    corners = list(state.corners)
+    if len(corners) == 0: return 0
+    coord = state.pacman_loc
+    if coord in corners:
+        corners.remove(coord)
+    
+    max = manhattanDistance(coord,corners[0])
+    for corner in corners:
+        if (manhattanDistance(coord,corner) > max):
+            max = manhattanDistance(coord,corner)
+    return max
 
 def cornersHeuristic(state, problem):
     """
@@ -400,8 +414,12 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
-
+    _corners = list(state.corners)
+    coord = state.pacman_loc
+    if len(_corners) != 0:
+        return (farestCorner(state,problem))# Default to trivial solution
+    else:
+        return 0
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
     def __init__(self):
@@ -443,6 +461,13 @@ class FoodSearchProblem:
                 nextFood[nextx][nexty] = False
                 successors.append( ( ((nextx, nexty), nextFood), direction, 1) )
         return successors
+        # if not self.walls[nextx][nexty]:
+        #         nextLoc = (nextx, nexty)
+        #         nextCorner = state.corners[:]
+        #         if self.inCorner((nextx,nexty)) and (nextx,nexty) in nextCorner:
+        #             nextCorner.remove((nextx,nexty))
+        #         childState = CornersState(nextLoc,nextCorner)
+        #         successors.append((childState,action,1))
 
     def getCostOfActions(self, actions):
         """Returns the cost of a particular sequence of actions.  If those actions
@@ -463,6 +488,34 @@ class AStarFoodSearchAgent(SearchAgent):
     def __init__(self):
         self.searchFunction = lambda prob: search.aStarSearch(prob, foodHeuristic)
         self.searchType = FoodSearchProblem
+
+def farestFood(state, problem):
+    foodCoords = state[1].asList()
+    if len(foodCoords) == 0: return 0
+    pacmanCoord = state[0]
+    if pacmanCoord in foodCoords:
+        foodCoords.remove(coord)
+    
+    max = manhattanDistance(pacmanCoord, foodCoords[0])
+    for foodCoord in foodCoords:
+        if (manhattanDistance(pacmanCoord,foodCoord) > max):
+            max = manhattanDistance(pacmanCoord,foodCoord)
+    return max
+
+def nearestFood(state, problem):
+    foodCoords = state[1].asList()
+    if len(foodCoords) == 0: return 0
+    pacmanCoord = state[0]
+    if pacmanCoord in foodCoords:
+        foodCoords.remove(coord)
+    
+    min = manhattanDistance(pacmanCoord, foodCoords[0])
+    for foodCoord in foodCoords:
+        if (manhattanDistance(pacmanCoord,foodCoord) < min):
+            min = manhattanDistance(pacmanCoord,foodCoord)
+    return min
+
+
 
 def foodHeuristic(state, problem):
     """
@@ -492,8 +545,15 @@ def foodHeuristic(state, problem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
-    position, foodGrid = state
+    position, foodGrid = state # state = (pacman_coord)
+    foodCoords = foodGrid.asList()
     "*** YOUR CODE HERE ***"
+    pacmanCoord = state[0]
+    if len(foodCoords) != 0:
+        return (farestFood(state,problem))# Default to trivial solution
+    else:
+        return 0
+
     return 0
 
 class ClosestDotSearchAgent(SearchAgent):
@@ -523,9 +583,7 @@ class ClosestDotSearchAgent(SearchAgent):
         food = gameState.getFood()
         walls = gameState.getWalls()
         problem = AnyFoodSearchProblem(gameState)
-
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return search.aStarSearch(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -559,8 +617,8 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         complete the problem definition.
         """
         x,y = state
-
         "*** YOUR CODE HERE ***"
+        return state in self.food.asList()
         util.raiseNotDefined()
 
 def mazeDistance(point1, point2, gameState):
